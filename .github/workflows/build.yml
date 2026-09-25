@@ -1,11 +1,11 @@
 name: Build firmware
 
-# - Every push / pull request: compile all boards and upload binaries as workflow artifacts.
-# - Pushing a tag like "v1.2.0": additionally publish all binaries to a GitHub Release.
+# - Pull request: compile all boards (build check only).
+# - Every commit / merged PR on main: create the next version tag (v1.0.0, v1.0.1, ...)
+#   and publish all binaries to a GitHub Release for that tag.
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -33,61 +33,61 @@ jobs:
             sketch: NPG-LITE
             core: esp32:esp32@3.2.0
             fqbn: esp32:esp32:esp32c6:CDCOnBoot=cdc
-            files: merged.bin
+            output: merged.bin
           # NPG-LITE-BLE uses A6 (battery pin), which only exists on ESP32-C6
           - name: NPG-LITE-BLE-ESP32C6
             sketch: NPG-LITE-BLE
             core: esp32:esp32@3.2.0
             fqbn: esp32:esp32:esp32c6:CDCOnBoot=cdc
-            files: merged.bin
+            output: merged.bin
 
           # ---------- ESP32-S3 ----------
           - name: ESP32-S3
             sketch: ESP32-S3
             core: esp32:esp32@3.2.0
             fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc
-            files: merged.bin
+            output: merged.bin
 
           # ---------- STM32 ----------
           - name: STM32G4-CORE-BOARD
             sketch: STM32G4-CORE-BOARD
             core: STMicroelectronics:stm32@2.10.1
             fqbn: STMicroelectronics:stm32:GenG4:pnum=WEACT_G474CE,usb=CDCgen
-            files: bin hex
+            output: bin
           - name: STM32F401CC-BLACK-PILL
             sketch: STM32F4-BLACK-PILL
             core: STMicroelectronics:stm32@2.10.1
             fqbn: STMicroelectronics:stm32:GenF4:pnum=BLACKPILL_F401CC,usb=CDCgen
-            files: bin hex
+            output: bin
           - name: STM32F411CE-BLACK-PILL
             sketch: STM32F4-BLACK-PILL
             core: STMicroelectronics:stm32@2.10.1
             fqbn: STMicroelectronics:stm32:GenF4:pnum=BLACKPILL_F411CE,usb=CDCgen
-            files: bin hex
+            output: bin
 
           # ---------- Arduino Mbed ----------
           - name: GIGA-R1
             sketch: GIGA-R1
             core: arduino:mbed_giga@4.3.1
             fqbn: arduino:mbed_giga:giga
-            files: bin
+            output: bin
           - name: RPI-PICO-RP2040
             sketch: RPI-PICO-RP2040
             core: arduino:mbed_rp2040@4.3.1
             fqbn: arduino:mbed_rp2040:pico
-            files: uf2
+            output: uf2
 
-          # ---------- Arduino UNO R4 ----------
+          # ---------- Arduino UNO R4 (same UNO-R4 sketch for Minima and WiFi) ----------
           - name: UNO-R4-MINIMA
             sketch: UNO-R4
             core: arduino:renesas_uno@1.5.1
             fqbn: arduino:renesas_uno:minima
-            files: bin hex
+            output: bin
           - name: UNO-R4-WIFI
             sketch: UNO-R4
             core: arduino:renesas_uno@1.5.1
             fqbn: arduino:renesas_uno:unor4wifi
-            files: bin hex
+            output: bin
 
           # ---------- AVR (board selected via BOARD_* macro) ----------
           - name: AVR-UNO-R3
@@ -95,43 +95,43 @@ jobs:
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:uno
             defines: -DBOARD_UNO_R3
-            files: hex
+            output: hex
           - name: AVR-GENUINO-UNO
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:uno
             defines: -DBOARD_GENUINO_UNO
-            files: hex
+            output: hex
           - name: AVR-UNO-CLONE-MAKER-UNO
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:uno
             defines: -DBOARD_UNO_CLONE
-            files: hex
+            output: hex
           - name: AVR-NANO-CLASSIC
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:nano:cpu=atmega328
             defines: -DBOARD_NANO_CLASSIC
-            files: hex
+            output: hex
           - name: AVR-NANO-CLONE-MAKER-NANO
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:nano:cpu=atmega328old
             defines: -DBOARD_NANO_CLONE
-            files: hex
+            output: hex
           - name: AVR-MEGA-2560-R3
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:mega:cpu=atmega2560
             defines: -DBOARD_MEGA_2560_R3
-            files: hex
+            output: hex
           - name: AVR-MEGA-2560-CLONE
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:mega:cpu=atmega2560
             defines: -DBOARD_MEGA_2560_CLONE
-            files: hex
+            output: hex
 
     steps:
       - uses: actions/checkout@v4
@@ -160,60 +160,96 @@ jobs:
           arduino-cli compile --fqbn "${{ matrix.fqbn }}" "${args[@]}" \
             --warnings default --output-dir build "${{ matrix.sketch }}"
 
-      - name: Package binaries
+      - name: Package binary
         run: |
           mkdir -p dist
-          for ext in ${{ matrix.files }}; do
-            src="build/${{ matrix.sketch }}.ino.$ext"
+          src="build/${{ matrix.sketch }}.ino.${{ matrix.output }}"
+          case "${{ matrix.output }}" in
+            # AVR: convert Intel HEX to raw binary
+            hex) objcopy -I ihex -O binary "$src" "dist/Chords-${{ matrix.name }}.bin" ;;
             # ESP32 merged image (bootloader + partitions + app) is flashed at 0x0
-            out_ext="${ext#merged.}"
-            cp -v "$src" "dist/Chords-${{ matrix.name }}.$out_ext"
-          done
+            merged.bin) cp "$src" "dist/Chords-${{ matrix.name }}.bin" ;;
+            *) cp "$src" "dist/Chords-${{ matrix.name }}.${{ matrix.output }}" ;;
+          esac
+          ls -l dist
 
+      # Only used to hand binaries to the release job; deleted once the release is published
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: ${{ matrix.name }}
           path: dist/*
           if-no-files-found: error
+          retention-days: 1
 
   release:
     name: Publish release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Run releases one at a time so two quick pushes never pick the same version
+    concurrency:
+      group: release
+      cancel-in-progress: false
     permissions:
       contents: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need all tags to find the latest version
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
 
-      - name: Generate checksums
-        working-directory: dist
-        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Next version
+        run: |
+          last=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [[ -z "$last" ]]; then
+            next=v1.0.0
+          else
+            IFS=. read -r major minor patch <<< "${last#v}"
+            next="v$major.$minor.$((patch + 1))"
+          fi
+          echo "Last: ${last:-none}, next: $next"
+          echo "VERSION=$next" >> "$GITHUB_ENV"
 
-      - uses: softprops/action-gh-release@v2
+      - name: Write release notes
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Firmware binaries
+
+          Download the file matching your board:
+
+          | Board | File | How to flash |
+          | ----- | ---- | ------------ |
+          | NPG Lite (ESP32-C6) | `Chords-NPG-LITE-ESP32C6.bin` | esptool / web flasher, offset `0x0` |
+          | NPG Lite BLE (ESP32-C6) | `Chords-NPG-LITE-BLE-ESP32C6.bin` | esptool / web flasher, offset `0x0` |
+          | ESP32-S3 | `Chords-ESP32-S3.bin` | esptool / web flasher, offset `0x0` |
+          | STM32G4 Core Board (WeAct G474CE) | `Chords-STM32G4-CORE-BOARD.bin` | STM32CubeProgrammer / DFU, `0x08000000` |
+          | STM32F4 Black Pill (F401CC / F411CE) | `Chords-STM32F401CC-BLACK-PILL.bin` / `Chords-STM32F411CE-BLACK-PILL.bin` | STM32CubeProgrammer / DFU, `0x08000000` |
+          | Arduino GIGA R1 | `Chords-GIGA-R1.bin` | `dfu-util` |
+          | Raspberry Pi Pico | `Chords-RPI-PICO-RP2040.uf2` | Hold BOOTSEL, drag & drop the `.uf2` |
+          | Arduino UNO R4 Minima / WiFi | `Chords-UNO-R4-MINIMA.bin` / `Chords-UNO-R4-WIFI.bin` | `bossac` / Arduino IDE |
+          | Arduino UNO R3 / Genuino UNO / UNO clone / Maker UNO | `Chords-AVR-UNO-R3.bin` / `Chords-AVR-GENUINO-UNO.bin` / `Chords-AVR-UNO-CLONE-MAKER-UNO.bin` | `avrdude -U flash:w:<file>:r` |
+          | Arduino Nano / Nano clone / Maker Nano | `Chords-AVR-NANO-CLASSIC.bin` / `Chords-AVR-NANO-CLONE-MAKER-NANO.bin` | `avrdude -U flash:w:<file>:r` (clones use the old bootloader, 57600 baud) |
+          | Arduino MEGA 2560 / MEGA clone | `Chords-AVR-MEGA-2560-R3.bin` / `Chords-AVR-MEGA-2560-CLONE.bin` | `avrdude -U flash:w:<file>:r` |
+
+          NOTES
+          echo "" >> notes.md
+          echo "Built from commit ${GITHUB_SHA::7}." >> notes.md
+
+      - name: Create tag and release
+        run: |
+          gh release create "$VERSION" dist/* --target "$GITHUB_SHA" \
+            --title "$VERSION" --notes-file notes.md --generate-notes --latest
+
+      # Remove the temporary per-board zip artifacts from the workflow run
+      - uses: geekyeggo/delete-artifact@v5
         with:
-          files: dist/*
-          generate_release_notes: true
-          body: |
-            ## Firmware binaries
-
-            Download the file matching your board:
-
-            | Board | File | How to flash |
-            | ----- | ---- | ------------ |
-            | NPG Lite (ESP32-C6) | `Chords-NPG-LITE-ESP32C6.bin` | esptool / web flasher, offset `0x0` |
-            | NPG Lite BLE (ESP32-C6) | `Chords-NPG-LITE-BLE-ESP32C6.bin` | esptool / web flasher, offset `0x0` |
-            | ESP32-S3 | `Chords-ESP32-S3.bin` | esptool / web flasher, offset `0x0` |
-            | STM32G4 Core Board (WeAct G474CE) | `Chords-STM32G4-CORE-BOARD.bin` | STM32CubeProgrammer / DFU, `0x08000000` |
-            | STM32F4 Black Pill (F401CC / F411CE) | `Chords-STM32F401CC-BLACK-PILL.bin` / `Chords-STM32F411CE-BLACK-PILL.bin` | STM32CubeProgrammer / DFU, `0x08000000` |
-            | Arduino GIGA R1 | `Chords-GIGA-R1.bin` | `dfu-util` |
-            | Raspberry Pi Pico | `Chords-RPI-PICO-RP2040.uf2` | Hold BOOTSEL, drag & drop the `.uf2` |
-            | Arduino UNO R4 Minima / WiFi | `Chords-UNO-R4-MINIMA.bin` / `Chords-UNO-R4-WIFI.bin` | `bossac` / Arduino IDE |
-            | Arduino UNO R3 / Genuino UNO / UNO clone / Maker UNO | `Chords-AVR-UNO-R3.hex` / `Chords-AVR-GENUINO-UNO.hex` / `Chords-AVR-UNO-CLONE-MAKER-UNO.hex` | `avrdude` |
-            | Arduino Nano / Nano clone / Maker Nano | `Chords-AVR-NANO-CLASSIC.hex` / `Chords-AVR-NANO-CLONE-MAKER-NANO.hex` | `avrdude` (clones use the old bootloader, 57600 baud) |
-            | Arduino MEGA 2560 / MEGA clone | `Chords-AVR-MEGA-2560-R3.hex` / `Chords-AVR-MEGA-2560-CLONE.hex` | `avrdude` |
-
-            Verify downloads with `SHA256SUMS.txt`.
+          name: "*"
