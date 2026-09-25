@@ -90,47 +90,23 @@ jobs:
             output: bin
 
           # ---------- AVR (board selected via BOARD_* macro) ----------
-          - name: AVR-UNO-R3
+          - name: UNO-R3
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:uno
             defines: -DBOARD_UNO_R3
             output: hex
-          - name: AVR-GENUINO-UNO
-            sketch: AVR-NANO-UNO-MEGA
-            core: arduino:avr@1.8.6
-            fqbn: arduino:avr:uno
-            defines: -DBOARD_GENUINO_UNO
-            output: hex
-          - name: AVR-UNO-CLONE-MAKER-UNO
-            sketch: AVR-NANO-UNO-MEGA
-            core: arduino:avr@1.8.6
-            fqbn: arduino:avr:uno
-            defines: -DBOARD_UNO_CLONE
-            output: hex
-          - name: AVR-NANO-CLASSIC
+          - name: NANO-CLASSIC
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:nano:cpu=atmega328
             defines: -DBOARD_NANO_CLASSIC
             output: hex
-          - name: AVR-NANO-CLONE-MAKER-NANO
-            sketch: AVR-NANO-UNO-MEGA
-            core: arduino:avr@1.8.6
-            fqbn: arduino:avr:nano:cpu=atmega328old
-            defines: -DBOARD_NANO_CLONE
-            output: hex
-          - name: AVR-MEGA-2560-R3
+          - name: MEGA-2560-R3
             sketch: AVR-NANO-UNO-MEGA
             core: arduino:avr@1.8.6
             fqbn: arduino:avr:mega:cpu=atmega2560
             defines: -DBOARD_MEGA_2560_R3
-            output: hex
-          - name: AVR-MEGA-2560-CLONE
-            sketch: AVR-NANO-UNO-MEGA
-            core: arduino:avr@1.8.6
-            fqbn: arduino:avr:mega:cpu=atmega2560
-            defines: -DBOARD_MEGA_2560_CLONE
             output: hex
 
     steps:
@@ -236,9 +212,9 @@ jobs:
           | Arduino GIGA R1 | `Chords-GIGA-R1.bin` | `dfu-util` |
           | Raspberry Pi Pico | `Chords-RPI-PICO-RP2040.uf2` | Hold BOOTSEL, drag & drop the `.uf2` |
           | Arduino UNO R4 Minima / WiFi | `Chords-UNO-R4-MINIMA.bin` / `Chords-UNO-R4-WIFI.bin` | `bossac` / Arduino IDE |
-          | Arduino UNO R3 / Genuino UNO / UNO clone / Maker UNO | `Chords-AVR-UNO-R3.bin` / `Chords-AVR-GENUINO-UNO.bin` / `Chords-AVR-UNO-CLONE-MAKER-UNO.bin` | `avrdude -U flash:w:<file>:r` |
-          | Arduino Nano / Nano clone / Maker Nano | `Chords-AVR-NANO-CLASSIC.bin` / `Chords-AVR-NANO-CLONE-MAKER-NANO.bin` | `avrdude -U flash:w:<file>:r` (clones use the old bootloader, 57600 baud) |
-          | Arduino MEGA 2560 / MEGA clone | `Chords-AVR-MEGA-2560-R3.bin` / `Chords-AVR-MEGA-2560-CLONE.bin` | `avrdude -U flash:w:<file>:r` |
+          | Arduino UNO R3 | `Chords-UNO-R3.bin` | `avrdude -U flash:w:<file>:r` |
+          | Arduino Nano Classic | `Chords-NANO-CLASSIC.bin` | `avrdude -U flash:w:<file>:r` |
+          | Arduino MEGA 2560 R3 | `Chords-MEGA-2560-R3.bin` | `avrdude -U flash:w:<file>:r` |
 
           NOTES
           echo "" >> notes.md

@@ -26,38 +26,20 @@
 ** Uncomment only your board macro
 **/
 
-// #define BOARD_NANO_CLONE
-// #define BOARD_MAKER_NANO
 // #define BOARD_NANO_CLASSIC
 // #define BOARD_UNO_R3
-// #define BOARD_GENUINO_UNO
-// #define BOARD_UNO_CLONE
-// #define BOARD_MAKER_UNO
 // #define BOARD_MEGA_2560_R3
-// #define BOARD_MEGA_2560_CLONE
 
 // Board specific macros
 // Do not edit anything!
 #if defined(BOARD_UNO_R3)
 #define BOARD_NAME "UNO-R3"
 #define NUM_CHANNELS 6
-#elif defined(BOARD_GENUINO_UNO)
-#define BOARD_NAME "GENUINO-UNO"
-#define NUM_CHANNELS 6
-#elif defined(BOARD_UNO_CLONE) || defined(BOARD_MAKER_UNO)
-#define BOARD_NAME "UNO-CLONE"
-#define NUM_CHANNELS 6
 #elif defined(BOARD_NANO_CLASSIC)
 #define BOARD_NAME "NANO-CLASSIC"
 #define NUM_CHANNELS 8
-#elif defined(BOARD_NANO_CLONE) || defined(BOARD_MAKER_NANO)
-#define BOARD_NAME "NANO-CLONE"
-#define NUM_CHANNELS 8
 #elif defined(BOARD_MEGA_2560_R3)
 #define BOARD_NAME "MEGA-2560-R3"
-#define NUM_CHANNELS 16
-#elif defined(BOARD_MEGA_2560_CLONE)
-#define BOARD_NAME "MEGA-2560-CLONE"
 #define NUM_CHANNELS 16
 #else
 #error "Board type not selected, please uncomment your BOARD macro!"

@@ -30,10 +30,10 @@ boards into bio-potential data acquisition devices when paired with BioAmp hardw
 | Arduino UNO R4 Minima/WiFi | 5V | 6 | 14-bit | 500 | 230400 | [UNO-R4.ino](UNO-R4/UNO-R4.ino) |
 | Arduino NANO Classic | 5V | 8 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
 | Arduino UNO R3 | 5V | 6 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
-| Arduino Genuino UNO | 5V | 6 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
 | Arduino MEGA 2560 R3 | 5V | 16 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
-| Maker Nano / Nano Clone (CH340) | 5V | 8 |  10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
-| Maker UNO / UNO R3 Clone (CH340) | 5V | 6 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
-| MEGA 2560 Clone (CH340) | 5V | 16 | 10-bit | 250 | 115200 | [AVR-NANO-UNO-MEGA.ino](AVR-NANO-UNO-MEGA/AVR-NANO-UNO-MEGA.ino) |
 | ESP32-S3 | 3V3 | 16 | 12-bit | 500 | 230400 | [ESP32-S3.ino](ESP32-S3/ESP32-S3.ino) |
+
+## Prebuilt firmware
+
+Every commit to `main` is built automatically and published on the [Releases](../../releases/latest) page, with one binary file per board (for example `Chords-UNO-R3.bin`, `Chords-ESP32-S3.bin`, `Chords-RPI-PICO-RP2040.uf2`). The release notes explain how to flash each file.
 
