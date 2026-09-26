@@ -26,54 +26,6 @@
 
 #include <Arduino.h>
 
-// ---------------------------------------------------------------------------
-// Jump to the STM32 built-in USB DFU bootloader on request (no BOOT0 button).
-// The "BOOTLOADER" serial command stores a magic value in a backup register and
-// resets the chip. Right after reset, before the Arduino core sets up clocks or
-// USB, the constructor below sees the magic value and jumps to system memory,
-// where ST's ROM bootloader starts in USB DFU mode (0483:DF11).
-// ---------------------------------------------------------------------------
-#define BOOTLOADER_MAGIC 0xB007DF11UL
-#define BOOTLOADER_BKP_INDEX LL_RTC_BKP_DR2
-#define SYSTEM_MEMORY_ADDR 0x1FFF0000UL
-
-void rebootToBootloader() {
-  enableBackupDomain();
-  setBackupRegister(BOOTLOADER_BKP_INDEX, BOOTLOADER_MAGIC);
-  NVIC_SystemReset();
-}
-
-// Priority 100 runs before the core's premain() (priority 101), so the chip is
-// still in its reset state here (HSI clock, no peripherals, no interrupts).
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
-__attribute__((constructor(100))) static void checkBootloaderRequest() {
-  enableBackupDomain();
-  if (getBackupRegister(BOOTLOADER_BKP_INDEX) != BOOTLOADER_MAGIC) return;
-  setBackupRegister(BOOTLOADER_BKP_INDEX, 0);  // one-shot: next reset runs Chords again
-
-  __disable_irq();
-  SysTick->CTRL = 0;
-  SysTick->LOAD = 0;
-  SysTick->VAL = 0;
-  for (uint32_t i = 0; i < (sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0])); i++) {
-    NVIC->ICER[i] = 0xFFFFFFFF;
-    NVIC->ICPR[i] = 0xFFFFFFFF;
-  }
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
-  __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();  // map system memory at 0x00000000
-  __DSB();
-  __ISB();
-  __enable_irq();
-
-  uint32_t sp = *(volatile uint32_t *)SYSTEM_MEMORY_ADDR;
-  uint32_t entry = *(volatile uint32_t *)(SYSTEM_MEMORY_ADDR + 4);
-  __set_MSP(sp);
-  ((void (*)(void))entry)();
-  while (1) {}
-}
-#pragma GCC diagnostic pop
-
 // Macros Definitions
 #define NUM_CHANNELS 8                                    // Number of channels supported
 #define HEADER_LEN 3                                      // Header: SYNC_BYTE_1 + SYNC_BYTE_2 + Counter
@@ -180,13 +132,6 @@ void loop() {
     } else if (command == "STATUS")  // Get status
     {
       Serial.println(timerStatus ? "RUNNING" : "STOPPED");
-    } else if (command == "BOOTLOADER")  // Reboot into USB DFU bootloader for flashing
-    {
-      timerStop();
-      Serial.println("BOOTLOADER");
-      Serial.flush();
-      delay(100);
-      rebootToBootloader();
     } else {
       Serial.println("UNKNOWN COMMAND");
     }
