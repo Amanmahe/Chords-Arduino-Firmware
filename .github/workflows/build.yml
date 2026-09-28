@@ -52,7 +52,7 @@ jobs:
           - name: STM32G4-CORE-BOARD
             sketch: STM32G4-CORE-BOARD
             core: STMicroelectronics:stm32@2.10.1
-            fqbn: STMicroelectronics:stm32:GenG4:pnum=WEACT_G474CE,usb=CDCgen
+            fqbn: STMicroelectronics:stm32:GenG4:pnum=GENERIC_G431CBUX,usb=CDCgen
             output: bin
           - name: STM32F401CC-BLACK-PILL
             sketch: STM32F4-BLACK-PILL
