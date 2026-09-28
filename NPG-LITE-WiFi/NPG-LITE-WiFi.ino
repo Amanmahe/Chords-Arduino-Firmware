@@ -30,17 +30,33 @@
 #include <WebSocketsServer.h>
 #include <Adafruit_NeoPixel.h>
 #include <ESPmDNS.h>
+#include <sdkconfig.h>
+#include "hal/efuse_hal.h"
 
-#define TRIGGER_PIN 9
+// ----- Chip-specific Pin Definitions -----
+// Use the ESP-IDF config macros to detect the chip.
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+// Store chip revision number (for ADC raw fixup on revision 1)
+uint32_t chiprev = efuse_hal_chip_revision();
+#define MOTOR_PIN 7   // Vibration motor (shared with LED_BUILTIN)
+#define PIXEL_PIN 15
+#define PIXEL_COUNT 6
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+#define MOTOR_PIN 7
+#define LED_PIN 6
+#define PIXEL_PIN 3
+#define PIXEL_COUNT 4
+#else
+#error "Unsupported board: Please target either ESP32-C6 or ESP32-C3 in your Board Manager."
+#endif
+
+#define TRIGGER_PIN 9 // BOOT button
 #define PIXEL_BRIGHTNESS 7
 #define TIMER_FREQ 1000000
-#define MOTOR_PIN 7
-#define PIXEL_PIN 3
-#define LED_PIN 6
 // Websockets connection on port 81
 WebSocketsServer webSocket = WebSocketsServer(81);
 // Onboard neopixel at PIXEL_PIN
-Adafruit_NeoPixel pixels(4, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 // Queue for storing ADC data
 static int dataQueueLen = 4000; // Queue length for ADC data
@@ -75,6 +91,13 @@ void IRAM_ATTR DRDY_ISR()
         for (int i = 0; i < sizeof(adc_pins) / sizeof(uint8_t); i++)
         {
             uint16_t res = analogRead(adc_pins[i]);
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+            if (chiprev == 1)
+            {
+                uint32_t v = (uint32_t)res * 4095u / 3249u; // Scale to 12-bit range
+                res = v > 4095u ? 4095u : v;
+            }
+#endif
             blockbytes[2 * i] = (uint8_t)(res >> 8);
             blockbytes[2 * i + 1] = (uint8_t)(res & 0xFF);
         }
@@ -150,7 +173,9 @@ void setup()
     vTaskDelay(100 / portTICK_PERIOD_MS);
     // Trigger pin to put device in AP mode
     pinMode(TRIGGER_PIN, INPUT_PULLUP);
+#ifdef LED_PIN
     pinMode(LED_PIN, OUTPUT);
+#endif
     pinMode(MOTOR_PIN, OUTPUT);
     WiFi.mode(WIFI_AP_STA);
     dataQueue = xQueueCreate(dataQueueLen, BLOCK_SIZE - 1);
